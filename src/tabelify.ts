@@ -1,12 +1,13 @@
 import { Chalk, ChalkInstance } from 'chalk';
 import { borderConfigs } from './borders.js';
 import { stripAnsi } from './stripAnsi.js';
+import { allKeysOf, distinct, isPrimitive } from './util.js';
 
 const c: ChalkInstance = new Chalk();
 
 type ColumnOptions<T> = {
   [k in keyof Partial<T>]: {
-    titleOverride?: string;
+    headerOverride?: string;
     horizontalAlignment?: `${'left' | 'right' | 'center'}`;
     verticalAlignment?: `${'top' | 'bottom' | 'center'}`;
     formatter?: (value: T[k]) => string;
@@ -17,6 +18,8 @@ type ColumnOptions<T> = {
 type TabelifyOptions = {
   rowDivider?: true;
   border?: keyof typeof borderConfigs;
+  recurse?: true;
+  indicies?: true;
 };
 
 type Cell<T> = {
@@ -28,22 +31,63 @@ type Cell<T> = {
 
 export function tabelify<T, K extends keyof T>(
   data: T[],
-  selector: K[],
+  selector?: K[],
   config?: {
     columnOptions?: ColumnOptions<Pick<T, K>>;
     tabelifyOptions?: TabelifyOptions;
   },
 ): string {
   const { columnOptions, tabelifyOptions } = config || {};
+  const hasPrimitives = data.some((item) => isPrimitive(item));
+
+  // If no selector is provided, use all keys of all objects (distinct only) in the data array
+  // as the selector.
+  selector = selector || (distinct(allKeysOf(data)) as K[]);
+
+  const defaultCellFormatter = (value: any): string => {
+    if (typeof value === 'string') {
+      return value;
+    }
+    if (value === null) {
+      return c.italic.black('null');
+    }
+
+    if (typeof value === 'undefined') {
+      return c.italic.black('undef');
+    }
+    if (typeof value === 'number') {
+      return c.yellowBright(value.toString());
+    }
+    if (typeof value === 'bigint') {
+      return c.yellowBright(value.toString() + 'n');
+    }
+    if (typeof value === 'boolean') {
+      return c.blueBright(value.toString());
+    }
+    if (typeof value === 'function') {
+      return c.magentaBright(`[Function]`);
+    }
+    if (Array.isArray(value)) {
+      return tabelifyOptions?.recurse
+        ? tabelify(value, undefined, { tabelifyOptions })
+        : c.greenBright(`[Array(${defaultCellFormatter(value.length)})]`);
+    }
+
+    return tabelifyOptions?.recurse ? tabelify([value], undefined, { tabelifyOptions }) : c.cyanBright(`[Object]`);
+  };
+
+  const defaultHeaderFormatter = (value: any): string => {
+    return c.magentaBright(value.toString());
+  };
 
   // Build header
   const headerData: Cell<T>[] = selector.map((key) => {
     const options = columnOptions && columnOptions[key] ? columnOptions[key] : {};
 
-    const title = options.titleOverride ? options.titleOverride : c.magentaBright(key.toString());
+    const header = options.headerOverride ? options.headerOverride : defaultHeaderFormatter(key);
 
     const column = key;
-    const content = c.bold(title).split('\n');
+    const content = c.bold(header).split('\n');
     const width = Math.max(...content.map((line) => stripAnsi(line).length));
 
     return {
@@ -59,7 +103,7 @@ export function tabelify<T, K extends keyof T>(
     selector.map((key) => {
       const value = item[key];
       const options = columnOptions && columnOptions[key] ? columnOptions[key] : {};
-      const formatter = options.formatter ? options.formatter : styleCell;
+      const formatter = options.formatter ? options.formatter : defaultCellFormatter;
 
       const cell = formatter(value);
 
@@ -78,8 +122,41 @@ export function tabelify<T, K extends keyof T>(
 
   const table = [headerData, ...tableData];
 
+  // Add primitives
+  if (hasPrimitives) {
+    for (let i = 0; i < table.length; i++) {
+      const row = table[i];
+      const value =
+        i == 0
+          ? c.italic(defaultHeaderFormatter('[Value]'))
+          : isPrimitive(data[i-1]) // Only style primitives, otherwise it might recurse Objects and overflow the stack
+          ? defaultCellFormatter(data[i-1])
+          : c.blackBright("╲");
+      row.push({
+        column: '#' as any,
+        content: [value],
+        width: stripAnsi(value).length,
+        options: { horizontalAlignment: 'center' },
+      });
+    }
+  }
+
+  // Add indicies
+  if (tabelifyOptions?.indicies) {
+    for (let i = 0; i < table.length; i++) {
+      const row = table[i];
+      const value = i == 0 ? c.italic(defaultHeaderFormatter('[Index]')) : c.italic.blackBright(i - 1);
+      row.unshift({
+        column: '#' as any,
+        content: [value],
+        width: stripAnsi(value).length,
+        options: { horizontalAlignment: 'center' },
+      });
+    }
+  }
+
   // Calculate column widths and row heights
-  const columnWidths = new Array(selector.length).fill(0);
+  const columnWidths = new Array(table[0].length).fill(0);
   const rowHeights = new Array(table.length).fill(0);
 
   for (let i = 0; i < table.length; i++) {
@@ -173,58 +250,41 @@ export function tabelify<T, K extends keyof T>(
     }
   }
 
-  tableString += bottomLeftCorner + horizontalBorder.join(verticalUpIntersection) + bottomRightCorner + '\n';
+  tableString += bottomLeftCorner + horizontalBorder.join(verticalUpIntersection) + bottomRightCorner;
 
   return tableString;
 }
-
-const styleCell = (value: any): string => {
-  if (typeof value === 'string') {
-    return value;
-  }
-
-  if (typeof value === 'number') {
-    return c.yellowBright(value.toString());
-  }
-  if (typeof value === 'boolean') {
-    return c.blueBright(value.toString());
-  }
-  if (Array.isArray(value)) {
-    return c.greenBright(`[Array(${styleCell(value.length)})]`);
-  }
-
-  return c.cyanBright(`[Object]`);
-};
 
 const sampleData = [
   { name: 'John', age: 24, city: 'New York\nYay!', country: 'USA' },
   { name: 'Jane', age: 18, city: 'London', country: 'UK' },
   { name: 'Bob', age: 32, city: 'Paris', country: 'France' },
-  { name: 'Mary', age: 27, city: 'Berlin', country: [0] },
-  { name: 'Mike', age: 41, city: 'Rome', country: {} },
-  { name: 'Lisa\nIs\nMy\nNaaaame!!!', age: 19, city: 'Madrid', country: 'Spain' },
-  { name: 'Tom', age: 23, city: 'Vienna', country: 'Austria' },
+  { name: 'Mary', age: 27, city: 'Berlin', country: [{ lol: 1 }, { kok: 2 }, { lol: 3 }] },
+  { name: 'Mike', age: 41, city: 'Rome', country: { f: 1 } },
+  { name: 'Lisa\nIs\nMy\nNaaaame!!!', age: 19, city: 'Madrid', country: () => 1 },
+  { name: 'Tom', age: 23, city: 'Vienna', country: 123n },
   { name: 'Tim', age: 35, city: 'Athens', country: 'Greece' },
-  { name: 'Kim', age: 29, city: 'Amsterdam', country: 'Netherlands' },
+  { name: 'Kim', age: 29, city: 'Amsterdam', country: [null, null, undefined, null] },
   { name: 'Joe', age: 25, city: 'Brussels', country: 'Belgium' },
   { name: 'Ann', age: 31, city: 'Lisbon', country: 'Portugal' },
   { name: 'Sam', age: 33, city: 'Oslo', country: 'Norway' },
   { name: 'Kate', age: 28, city: 'Stockholm', country: 'Sweden' },
   { name: 'Carl', age: 30, city: 'Helsinki', country: 'Finland' },
+  1 as any,
 ];
 
 const out = tabelify(sampleData, ['name', 'age', 'city', 'country'], {
   columnOptions: {
     name: {
-      titleOverride: c.blueBright('Name'),
+      headerOverride: c.blueBright('Name'),
     },
     age: {
-      titleOverride: c.blueBright('Age'),
+      headerOverride: c.blueBright('Age'),
       horizontalAlignment: 'right',
     },
     country: {
-      titleOverride: c.blueBright('Country'),
-      horizontalAlignment: 'center',
+      headerOverride: c.blueBright('Country'),
+      horizontalAlignment: 'right',
     },
     city: {
       // titleOverride: c.blueBright('City'),
@@ -234,6 +294,8 @@ const out = tabelify(sampleData, ['name', 'age', 'city', 'country'], {
   tabelifyOptions: {
     rowDivider: true,
     border: 'rounded',
+    recurse: true,
+    indicies: true,
   },
 });
 
