@@ -1,15 +1,8 @@
 import { Chalk, ChalkInstance } from 'chalk';
+import { borderConfigs } from './borders.js';
+import { stripAnsi } from './stripAnsi.js';
 
 const c: ChalkInstance = new Chalk();
-
-const ansiRegexPattern = [
-  '[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)',
-  '(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))',
-].join('|');
-
-const ansiRegex = new RegExp(ansiRegexPattern, 'g');
-
-const stripAnsi = (text: string) => text.replace(ansiRegex, '');
 
 type ColumnOptions<T> = {
   [k in keyof Partial<T>]: {
@@ -23,6 +16,7 @@ type ColumnOptions<T> = {
 
 type TabelifyOptions = {
   rowDivider?: true;
+  border?: keyof typeof borderConfigs;
 };
 
 type Cell<T> = {
@@ -46,7 +40,7 @@ export function tabelify<T, K extends keyof T>(
   const headerData: Cell<T>[] = selector.map((key) => {
     const options = columnOptions && columnOptions[key] ? columnOptions[key] : {};
 
-    const title = options.titleOverride ? options.titleOverride : key.toString();
+    const title = options.titleOverride ? options.titleOverride : c.magentaBright(key.toString());
 
     const column = key;
     const content = c.bold(title).split('\n');
@@ -145,27 +139,41 @@ export function tabelify<T, K extends keyof T>(
   }
 
   // Borders
-  const horizontalBorder = columnWidths.map((width) => '-'.repeat(width));
+  const {
+    topLeftCorner,
+    topRightCorner,
+    bottomLeftCorner,
+    bottomRightCorner,
+    vertical,
+    horizontal,
+    verticalDownIntersection,
+    verticalUpIntersection,
+    horizontalRightIntersection,
+    horizontalLeftIntersection,
+    intersection,
+  } = borderConfigs[tabelifyOptions?.border ?? 'rounded'];
 
-  let tableString = '+-' + horizontalBorder.join('-+-') + '-+\n';
+  const horizontalBorder = columnWidths.map((width) => horizontal.repeat(width));
+  const rowSeparator =
+    horizontalRightIntersection + horizontalBorder.join(intersection) + horizontalLeftIntersection + '\n';
+
+  let tableString = topLeftCorner + horizontalBorder.join(verticalDownIntersection) + topRightCorner + '\n';
   for (let i = 0; i < rowHeights[0]; i++) {
-    tableString += '| ' + table[0].map((cell) => cell.content[i]).join(' | ') + ' |\n';
+    tableString += `${vertical} ` + table[0].map((cell) => cell.content[i]).join(` ${vertical} `) + ` ${vertical}\n`;
   }
-  tableString += '+-' + horizontalBorder.join('-+-') + '-+\n';
+  tableString += rowSeparator;
 
   for (let i = 1; i < table.length; i++) {
     for (let j = 0; j < rowHeights[i]; j++) {
-      tableString += '| ' + table[i].map((cell) => cell.content[j]).join(' | ') + ' |\n';
+      tableString += `${vertical} ` + table[i].map((cell) => cell.content[j]).join(` ${vertical} `) + ` ${vertical}\n`;
     }
 
-    if (tabelifyOptions?.rowDivider) {
-      tableString += '+-' + horizontalBorder.join('-+-') + '-+\n';
+    if (tabelifyOptions?.rowDivider && i < table.length - 1) {
+      tableString += rowSeparator;
     }
   }
 
-  if (!tabelifyOptions?.rowDivider) {
-    tableString += '+-' + horizontalBorder.join('-+-') + '-+\n';
-  }
+  tableString += bottomLeftCorner + horizontalBorder.join(verticalUpIntersection) + bottomRightCorner + '\n';
 
   return tableString;
 }
@@ -219,12 +227,13 @@ const out = tabelify(sampleData, ['name', 'age', 'city', 'country'], {
       horizontalAlignment: 'center',
     },
     city: {
-      titleOverride: c.blueBright('City'),
+      // titleOverride: c.blueBright('City'),
       horizontalAlignment: 'left',
     },
   },
   tabelifyOptions: {
     rowDivider: true,
+    border: 'rounded',
   },
 });
 
