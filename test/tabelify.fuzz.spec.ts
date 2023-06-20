@@ -94,8 +94,6 @@ describe(tabelify.name + ' Fuzzy Tests', () => {
     });
     const cleanedResult = stripAnsi(result);
 
-    console.log(cleanedResult);
-
     // Assert
     expect(cleanedResult).toEqual(cleanedExpected);
   });

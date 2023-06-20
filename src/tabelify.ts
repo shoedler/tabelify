@@ -23,8 +23,6 @@ export type TabelifyOptions = {
   indices?: true;
 };
 
-const headerSymbol = Symbol('header');
-
 type Cell<T> = {
   content: string[];
   width: number;
@@ -64,7 +62,6 @@ export function tabelify<T, K extends keyof T>(
       content,
       width,
       options,
-      [headerSymbol]: true,
     };
   });
 
