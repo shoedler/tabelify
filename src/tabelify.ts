@@ -20,7 +20,7 @@ export type TabelifyOptions = {
   rowDivider?: true;
   border?: BorderConfig;
   recurse?: true;
-  indicies?: true;
+  indices?: true;
 };
 
 const headerSymbol = Symbol('header');
@@ -108,7 +108,7 @@ export function tabelify<T, K extends keyof T>(
   }
 
   // Add indicies
-  if (tabelifyOptions?.indicies) {
+  if (tabelifyOptions?.indices) {
     for (let i = 0; i < table.length; i++) {
       const row = table[i];
       const value = i == 0 ? defaultFormatters.internalHeader('[Index]') : defaultFormatters.internalCell(i - 1);
@@ -231,54 +231,3 @@ export function tabelify<T, K extends keyof T>(
 
   return tableString;
 }
-
-const sampleData = [
-  { name: 'John', age: 24, city: 'New York\nYay!', country: 'USA' },
-  { name: 'Jane', age: 18, city: 'London', country: 'UK' },
-  { name: 'Bob', age: 32, city: 'Paris', country: 'France' },
-  { name: 'Mary', age: 27, city: 'Berlin', country: [{ lol: 1 }, { kok: 2 }, { lol: 3 }] },
-  { name: 'Mike', age: 41, city: 'Rome', country: { f: 1 } },
-  { name: 'Lisa\nIs\nMy\nNaaaame!!!', age: 19, city: 'Madrid', country: () => 1 },
-  { name: 'Tom', age: 23, city: 'Vienna', country: 123n },
-  { name: 'Tim', age: 35, city: 'Athens', country: 'Greece' },
-  { name: 'Kim', age: 29, city: 'Amsterdam', country: [null, null, undefined, null] },
-  { name: 'Joe', age: 25, city: 'Brussels', country: 'Belgium' },
-  { name: 'Ann', age: 31, city: 'Lisbon', country: 'Portugal' },
-  { name: 'Sam', age: 33, city: 'Oslo', country: 'Norway' },
-  { name: 'Kate', age: 28, city: 'Stockholm', country: 'Sweden' },
-  { name: 'Carl', age: 30, city: 'Helsinki', country: 'Finland' },
-  1 as any,
-];
-
-const out = tabelify(sampleData, {
-  selector: ['name', 'age', 'city', 'country'],
-  columnOptions: {
-    name: {
-      headerOverride: c.blueBright('Name'),
-    },
-    age: {
-      headerOverride: c.blueBright('Age'),
-      horizontalAlignment: 'right',
-    },
-    country: {
-      headerOverride: c.blueBright('Country'),
-      horizontalAlignment: 'right',
-    },
-    city: {
-      // titleOverride: c.blueBright('City'),
-      horizontalAlignment: 'left',
-    },
-  },
-  tabelifyOptions: {
-    rowDivider: true,
-    border: 'rounded',
-    recurse: true,
-    indicies: true,
-  },
-});
-
-console.log(out);
-
-const out2 = tabelify('helloworld'.split(''));
-
-console.log(out2);
