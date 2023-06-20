@@ -14,3 +14,7 @@ export const isPrimitive = (value: any) => {
 
   return true;
 };
+
+export const getUmlautCount = (str: string) => {
+  return str.match(/\u{308}/gmu)?.length ?? 0; // Currently, only U+0308 is supported. (7̈ )
+};

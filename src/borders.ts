@@ -68,10 +68,14 @@ const ascii = {
   intersection: '-+-',
 };
 
-export const borderConfigs = {
+const borderConfigs = {
   rounded,
   double,
   single,
   bold,
   ascii,
 };
+
+export type BorderConfig = keyof typeof borderConfigs;
+
+export const provideBorderConfig = (border: BorderConfig) => borderConfigs[border];

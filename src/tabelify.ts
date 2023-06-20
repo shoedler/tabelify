@@ -1,7 +1,8 @@
 import { Chalk, ChalkInstance } from 'chalk';
-import { borderConfigs } from './borders.js';
+import { BorderConfig, provideBorderConfig } from './borders.js';
+import { provideDefaultFormatters } from './formatters.js';
 import { stripAnsi } from './stripAnsi.js';
-import { allKeysOf, distinct, isPrimitive } from './util.js';
+import { allKeysOf, getUmlautCount as countUmlauts, distinct, isPrimitive } from './util.js';
 
 const c: ChalkInstance = new Chalk();
 
@@ -15,15 +16,16 @@ type ColumnOptions<T> = {
   };
 };
 
-type TabelifyOptions = {
+export type TabelifyOptions = {
   rowDivider?: true;
-  border?: keyof typeof borderConfigs;
+  border?: BorderConfig;
   recurse?: true;
   indicies?: true;
 };
 
+const headerSymbol = Symbol('header');
+
 type Cell<T> = {
-  column: keyof T;
   content: string[];
   width: number;
   options: ColumnOptions<T>[keyof T];
@@ -31,88 +33,53 @@ type Cell<T> = {
 
 export function tabelify<T, K extends keyof T>(
   data: T[],
-  selector?: K[],
   config?: {
+    selector?: K[];
     columnOptions?: ColumnOptions<Pick<T, K>>;
     tabelifyOptions?: TabelifyOptions;
   },
 ): string {
   const { columnOptions, tabelifyOptions } = config || {};
+
+  // Even tough this library is intended for arrays of objects, it should also work with arrays of primitives.
+  // If there are any primitives, we'll add a separate column for them.
   const hasPrimitives = data.some((item) => isPrimitive(item));
 
-  // If no selector is provided, use all keys of all objects (distinct only) in the data array
-  // as the selector.
-  selector = selector || (distinct(allKeysOf(data)) as K[]);
+  // If no selector is provided, use all keys of all objects (distinct only) in the data array as the selector.
+  const selector = config?.selector || (distinct(allKeysOf(data)) as K[]);
 
-  const defaultCellFormatter = (value: any): string => {
-    if (typeof value === 'string') {
-      return value;
-    }
-    if (value === null) {
-      return c.italic.black('null');
-    }
-
-    if (typeof value === 'undefined') {
-      return c.italic.black('undef');
-    }
-    if (typeof value === 'number') {
-      return c.yellowBright(value.toString());
-    }
-    if (typeof value === 'bigint') {
-      return c.yellowBright(value.toString() + 'n');
-    }
-    if (typeof value === 'boolean') {
-      return c.blueBright(value.toString());
-    }
-    if (typeof value === 'function') {
-      return c.magentaBright(`[Function]`);
-    }
-    if (Array.isArray(value)) {
-      return tabelifyOptions?.recurse
-        ? tabelify(value, undefined, { tabelifyOptions })
-        : c.greenBright(`[Array(${defaultCellFormatter(value.length)})]`);
-    }
-
-    return tabelifyOptions?.recurse ? tabelify([value], undefined, { tabelifyOptions }) : c.cyanBright(`[Object]`);
-  };
-
-  const defaultHeaderFormatter = (value: any): string => {
-    return c.magentaBright(value.toString());
-  };
+  const defaultFormatters = provideDefaultFormatters(tabelifyOptions);
+  const borderConfig = provideBorderConfig(tabelifyOptions?.border ?? 'rounded');
 
   // Build header
   const headerData: Cell<T>[] = selector.map((key) => {
     const options = columnOptions && columnOptions[key] ? columnOptions[key] : {};
 
-    const header = options.headerOverride ? options.headerOverride : defaultHeaderFormatter(key);
+    const header = options.headerOverride ? options.headerOverride : defaultFormatters.header(key);
 
-    const column = key;
     const content = c.bold(header).split('\n');
     const width = Math.max(...content.map((line) => stripAnsi(line).length));
 
     return {
-      column,
       content,
       width,
       options,
+      [headerSymbol]: true,
     };
   });
 
   // Build table
   const tableData: Cell<T>[][] = data.map((item) =>
     selector.map((key) => {
-      const value = item[key];
       const options = columnOptions && columnOptions[key] ? columnOptions[key] : {};
-      const formatter = options.formatter ? options.formatter : defaultCellFormatter;
+      const formatter = options.formatter ? options.formatter : defaultFormatters.cell;
 
-      const cell = formatter(value);
+      const cell = formatter(item[key]);
 
-      const column = key;
       const content = cell.split('\n');
       const width = Math.max(...content.map((line) => stripAnsi(line).length));
 
       return {
-        column,
         content,
         width,
         options,
@@ -128,12 +95,11 @@ export function tabelify<T, K extends keyof T>(
       const row = table[i];
       const value =
         i == 0
-          ? c.italic(defaultHeaderFormatter('[Value]'))
-          : isPrimitive(data[i-1]) // Only style primitives, otherwise it might recurse Objects and overflow the stack
-          ? defaultCellFormatter(data[i-1])
-          : c.blackBright("╲");
+          ? defaultFormatters.internalHeader('[Value]')
+          : isPrimitive(data[i - 1]) // Only style primitives, otherwise it might recurse Objects and overflow the stack
+          ? defaultFormatters.cell(data[i - 1])
+          : defaultFormatters.internalCell('╲');
       row.push({
-        column: '#' as any,
         content: [value],
         width: stripAnsi(value).length,
         options: { horizontalAlignment: 'center' },
@@ -145,9 +111,8 @@ export function tabelify<T, K extends keyof T>(
   if (tabelifyOptions?.indicies) {
     for (let i = 0; i < table.length; i++) {
       const row = table[i];
-      const value = i == 0 ? c.italic(defaultHeaderFormatter('[Index]')) : c.italic.blackBright(i - 1);
+      const value = i == 0 ? defaultFormatters.internalHeader('[Index]') : defaultFormatters.internalCell(i - 1);
       row.unshift({
-        column: '#' as any,
         content: [value],
         width: stripAnsi(value).length,
         options: { horizontalAlignment: 'center' },
@@ -163,7 +128,6 @@ export function tabelify<T, K extends keyof T>(
     const row = table[i];
     for (let j = 0; j < row.length; j++) {
       const cell = row[j];
-
       columnWidths[j] = Math.max(columnWidths[j], cell.width);
       rowHeights[i] = Math.max(rowHeights[i], cell.content.length);
     }
@@ -182,12 +146,14 @@ export function tabelify<T, K extends keyof T>(
       for (let k = 0; k < cell.content.length; k++) {
         const line = cell.content[k];
         const strippedLine = stripAnsi(line);
-        const padAmount = cellPad - strippedLine.length + (strippedLine.match(/\u{308}/gmu)?.length ?? 0); // For each umlaut (diacritic), add one more space. Currently, only U+0308 is supported. (7̈ )
 
-        if (horizontalAlignment === 'right') {
-          cell.content[k] = ' '.repeat(padAmount) + line;
-        } else if (horizontalAlignment === 'left') {
-          cell.content[k] = line + ' '.repeat(padAmount);
+        // Patch umlauts: For each umlaut (diacritic), add one space.
+        const padAmount = cellPad - strippedLine.length + countUmlauts(strippedLine);
+
+        if (horizontalAlignment === 'right' || horizontalAlignment === 'left') {
+          const padding = ' '.repeat(padAmount);
+
+          cell.content[k] = horizontalAlignment === 'right' ? padding + line : line + padding;
         } else {
           const leftPad = Math.floor(padAmount / 2);
           const rightPad = Math.ceil(padAmount / 2);
@@ -215,42 +181,53 @@ export function tabelify<T, K extends keyof T>(
     }
   }
 
-  // Borders
-  const {
-    topLeftCorner,
-    topRightCorner,
-    bottomLeftCorner,
-    bottomRightCorner,
-    vertical,
-    horizontal,
-    verticalDownIntersection,
-    verticalUpIntersection,
-    horizontalRightIntersection,
-    horizontalLeftIntersection,
-    intersection,
-  } = borderConfigs[tabelifyOptions?.border ?? 'rounded'];
-
-  const horizontalBorder = columnWidths.map((width) => horizontal.repeat(width));
+  // Build table string
+  // Header border
+  const horizontalBorder = columnWidths.map((width) => borderConfig.horizontal.repeat(width));
   const rowSeparator =
-    horizontalRightIntersection + horizontalBorder.join(intersection) + horizontalLeftIntersection + '\n';
+    borderConfig.horizontalRightIntersection +
+    horizontalBorder.join(borderConfig.intersection) +
+    borderConfig.horizontalLeftIntersection +
+    '\n';
 
-  let tableString = topLeftCorner + horizontalBorder.join(verticalDownIntersection) + topRightCorner + '\n';
+  // Top border
+  let tableString =
+    borderConfig.topLeftCorner +
+    horizontalBorder.join(borderConfig.verticalDownIntersection) +
+    borderConfig.topRightCorner +
+    '\n';
+
+  // Header
   for (let i = 0; i < rowHeights[0]; i++) {
-    tableString += `${vertical} ` + table[0].map((cell) => cell.content[i]).join(` ${vertical} `) + ` ${vertical}\n`;
+    tableString +=
+      `${borderConfig.vertical} ` +
+      table[0].map((cell) => cell.content[i]).join(` ${borderConfig.vertical} `) +
+      ` ${borderConfig.vertical}\n`;
   }
+
+  // Header separator
   tableString += rowSeparator;
 
+  // Body
   for (let i = 1; i < table.length; i++) {
     for (let j = 0; j < rowHeights[i]; j++) {
-      tableString += `${vertical} ` + table[i].map((cell) => cell.content[j]).join(` ${vertical} `) + ` ${vertical}\n`;
+      tableString +=
+        `${borderConfig.vertical} ` +
+        table[i].map((cell) => cell.content[j]).join(` ${borderConfig.vertical} `) +
+        ` ${borderConfig.vertical}\n`;
     }
 
+    // Row separator
     if (tabelifyOptions?.rowDivider && i < table.length - 1) {
       tableString += rowSeparator;
     }
   }
 
-  tableString += bottomLeftCorner + horizontalBorder.join(verticalUpIntersection) + bottomRightCorner;
+  // Bottom border
+  tableString +=
+    borderConfig.bottomLeftCorner +
+    horizontalBorder.join(borderConfig.verticalUpIntersection) +
+    borderConfig.bottomRightCorner;
 
   return tableString;
 }
@@ -273,7 +250,8 @@ const sampleData = [
   1 as any,
 ];
 
-const out = tabelify(sampleData, ['name', 'age', 'city', 'country'], {
+const out = tabelify(sampleData, {
+  selector: ['name', 'age', 'city', 'country'],
   columnOptions: {
     name: {
       headerOverride: c.blueBright('Name'),
@@ -300,3 +278,7 @@ const out = tabelify(sampleData, ['name', 'age', 'city', 'country'], {
 });
 
 console.log(out);
+
+const out2 = tabelify('helloworld'.split(''));
+
+console.log(out2);
