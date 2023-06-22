@@ -105,4 +105,5 @@ const out = tabelify(
 console.log(out);
 ```
 
-![image](https://github.com/shoedler/tabelify/assets/38029550/56510276-e964-4c01-bf89-97bba549ea03)
+![image](https://github.com/shoedler/tabelify/assets/38029550/90be20c0-04ef-478e-9ddc-a8a1f46cbb23)
+
