@@ -2,6 +2,7 @@
   "name": "tabelify",
   "version": "1.0.0",
   "description": "Nicely display data as tables in the terminal",
+  "engines" : { "node" : ">=18.0.0" },
   "main": "index.ts",
   "type": "module",
   "scripts": {
