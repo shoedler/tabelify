@@ -42,6 +42,26 @@ describe(tabelify.name + ' TabelifyOptions.columnOptions', () => {
     expect(cleanedResult).toEqual(cleanedExpected);
   });
 
+  it('should apply a custom formatter with a chalk instance', () => {
+    // Arrange
+    const data = [{ Whatsup: 1 }, { Whatsup: 2 }, { Whatsup: 3 }];
+    const cleanedExpected =
+      '╭─────────╮\n' +
+      '│ Whatsup │\n' +
+      '├─────────┤\n' +
+      '│    2    │\n' +
+      '│    3    │\n' +
+      '│    4    │\n' +
+      '╰─────────╯';
+
+    // Act
+    const result = tabelify(data, { columnOptions: { Whatsup: { formatter: (v, c) => c.bold(v + 1) } } });
+    const cleanedResult = stripAnsi(result);
+
+    // Assert
+    expect(cleanedResult).toEqual(cleanedExpected);
+  });
+
   it('should align cell contents horizontally', () => {
     // Arrange
     const data = [

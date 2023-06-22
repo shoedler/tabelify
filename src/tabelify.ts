@@ -11,7 +11,7 @@ export type ColumnOptions<T> = {
     headerOverride?: string;
     horizontalAlignment?: `${'left' | 'right' | 'center'}`;
     verticalAlignment?: `${'top' | 'bottom' | 'center'}`;
-    formatter?: (value: T[k]) => string;
+    formatter?: (value: T[k], chalk: ChalkInstance) => string;
   };
 };
 
@@ -72,7 +72,7 @@ export function tabelify<T, K extends keyof T>(
     selector.map((key) => {
       const options = columnOptions && columnOptions[key] ? columnOptions[key] : {};
       const formatter = options.formatter ? options.formatter : defaultFormatters.cell;
-      const cell = isPrimitive(item) ? defaultFormatters.internalCell('╲') : formatter(item[key]);
+      const cell = isPrimitive(item) ? defaultFormatters.internalCell('╲') : formatter(item[key], c);
 
       return createCell(cell, options);
     }),
