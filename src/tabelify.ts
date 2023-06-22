@@ -6,13 +6,12 @@ import { allKeysOf, getUmlautCount as countUmlauts, distinct, isPrimitive } from
 
 const c: ChalkInstance = new Chalk();
 
-type ColumnOptions<T> = {
+export type ColumnOptions<T> = {
   [k in keyof Partial<T>]: {
     headerOverride?: string;
     horizontalAlignment?: `${'left' | 'right' | 'center'}`;
     verticalAlignment?: `${'top' | 'bottom' | 'center'}`;
     formatter?: (value: T[k]) => string;
-    showDiffToPrevious?: boolean;
   };
 };
 
@@ -49,13 +48,8 @@ export function tabelify<T, K extends keyof T>(
   const defaultFormatters = provideDefaultFormatters(tabelifyOptions);
   const borderConfig = provideBorderConfig(tabelifyOptions?.border ?? 'rounded');
 
-  // Build header
-  const headerData: Cell<T>[] = selector.map((key) => {
-    const options = columnOptions && columnOptions[key] ? columnOptions[key] : {};
-
-    const header = options.headerOverride ? options.headerOverride : defaultFormatters.header(key);
-
-    const content = c.bold(header).split('\n');
+  const createCell = (result: string, options: ColumnOptions<Pick<T, K>>[K]) => {
+    const content = result.split('\n');
     const width = Math.max(...content.map((line) => stripAnsi(line).length));
 
     return {
@@ -63,6 +57,14 @@ export function tabelify<T, K extends keyof T>(
       width,
       options,
     };
+  };
+
+  // Build header
+  const headerData: Cell<T>[] = selector.map((key) => {
+    const options = columnOptions && columnOptions[key] ? columnOptions[key] : {};
+    const header = options.headerOverride ? options.headerOverride : defaultFormatters.header(key);
+
+    return createCell(c.bold(header), options);
   });
 
   // Build table
@@ -70,17 +72,9 @@ export function tabelify<T, K extends keyof T>(
     selector.map((key) => {
       const options = columnOptions && columnOptions[key] ? columnOptions[key] : {};
       const formatter = options.formatter ? options.formatter : defaultFormatters.cell;
+      const cell = isPrimitive(item) ? defaultFormatters.internalCell('╲') : formatter(item[key]);
 
-      const cell = formatter(item[key]);
-
-      const content = cell.split('\n');
-      const width = Math.max(...content.map((line) => stripAnsi(line).length));
-
-      return {
-        content,
-        width,
-        options,
-      };
+      return createCell(cell, options);
     }),
   );
 
@@ -93,14 +87,12 @@ export function tabelify<T, K extends keyof T>(
       const value =
         i == 0
           ? defaultFormatters.internalHeader('[Value]')
-          : isPrimitive(data[i - 1]) // Only style primitives, otherwise it might recurse Objects and overflow the stack
+          : isPrimitive(data[i - 1]) || Array.isArray(data[i - 1]) // Only style primitives, otherwise it might recurse Objects and overflow the stack
           ? defaultFormatters.cell(data[i - 1])
           : defaultFormatters.internalCell('╲');
-      row.push({
-        content: [value],
-        width: stripAnsi(value).length,
-        options: { horizontalAlignment: 'center' },
-      });
+      const cell = createCell(value, { horizontalAlignment: 'center' });
+
+      row.push(cell);
     }
   }
 
@@ -109,11 +101,9 @@ export function tabelify<T, K extends keyof T>(
     for (let i = 0; i < table.length; i++) {
       const row = table[i];
       const value = i == 0 ? defaultFormatters.internalHeader('[Index]') : defaultFormatters.internalCell(i - 1);
-      row.unshift({
-        content: [value],
-        width: stripAnsi(value).length,
-        options: { horizontalAlignment: 'center' },
-      });
+      const cell = createCell(value, { horizontalAlignment: 'center' });
+
+      row.unshift(cell);
     }
   }
 

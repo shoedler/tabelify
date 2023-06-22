@@ -14,7 +14,7 @@ export const isPrimitive = (value: any) => {
 
 export const allKeysOf = <T>(obj: T[]) =>
   obj
-    .filter((item) => !isPrimitive(item))
+    .filter((item) => !isPrimitive(item) && !Array.isArray(item))
     .map((item) => (item ? Object.keys(item) : []))
     .reduce((a, b) => a.concat(b), []);
 
