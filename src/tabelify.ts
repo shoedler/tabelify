@@ -4,7 +4,7 @@ import { provideDefaultFormatters } from './formatters.js';
 import { stripAnsi } from './stripAnsi.js';
 import { allKeysOf, getUmlautCount as countUmlauts, distinct, isPrimitive } from './util.js';
 
-const c: ChalkInstance = new Chalk();
+const chalk: ChalkInstance = new Chalk();
 
 export type ColumnOptions<T> = {
   [k in keyof Partial<T>]: {
@@ -64,7 +64,7 @@ export function tabelify<T, K extends keyof T>(
     const options = columnOptions && columnOptions[key] ? columnOptions[key] : {};
     const header = options.headerOverride ? options.headerOverride : defaultFormatters.header(key);
 
-    return createCell(c.bold(header), options);
+    return createCell(chalk.bold(header), options);
   });
 
   // Build table
@@ -72,7 +72,7 @@ export function tabelify<T, K extends keyof T>(
     selector.map((key) => {
       const options = columnOptions && columnOptions[key] ? columnOptions[key] : {};
       const formatter = options.formatter ? options.formatter : defaultFormatters.cell;
-      const cell = isPrimitive(item) ? defaultFormatters.internalCell('╲') : formatter(item[key], c);
+      const cell = isPrimitive(item) ? defaultFormatters.internalCell('─') : formatter(item[key], chalk);
 
       return createCell(cell, options);
     }),
@@ -89,7 +89,7 @@ export function tabelify<T, K extends keyof T>(
           ? defaultFormatters.internalHeader('[Value]')
           : isPrimitive(data[i - 1]) || Array.isArray(data[i - 1]) // Only style primitives, otherwise it might recurse Objects and overflow the stack
           ? defaultFormatters.cell(data[i - 1])
-          : defaultFormatters.internalCell('╲');
+          : defaultFormatters.internalCell('─');
       const cell = createCell(value, { horizontalAlignment: 'center' });
 
       row.push(cell);

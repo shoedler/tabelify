@@ -9,11 +9,11 @@ export const provideDefaultFormatters = (tabelifyOptions: TabelifyOptions) => {
       return value;
     }
     if (value === null) {
-      return c.italic.black('null');
+      return c.italic.gray('null');
     }
 
     if (typeof value === 'undefined') {
-      return c.italic.black('undef');
+      return c.italic.gray('undef');
     }
     if (typeof value === 'number') {
       return c.yellowBright(value.toString());

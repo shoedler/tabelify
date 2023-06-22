@@ -12,7 +12,7 @@ npm i tabelify
 ## Basic Usage
 
 ```javascript
-import tabelify from 'tabelify';
+import { tabelify } from 'tabelify';
 
 const data = [
   { name: 'John', age: 24, city: 'New York' },
@@ -30,7 +30,7 @@ console.log(tabelify(data));
 Here's and example with all the options configured:
 
 ```typescript
-import tabelify from 'tabelify';
+import { tabelify } from 'tabelify';
 
 const data = [
   { name: 'John', age: 24, city: 'New York' },
@@ -64,6 +64,8 @@ console.log(out);
 Here's an example with mixed data:
 
 ```typescript
+import { tabelify } from 'tabelify';
+
 const out = tabelify(
   [
     { name: 'John', age: 24, city: 'New York\nYay!', country: 'USA' },
@@ -106,4 +108,3 @@ console.log(out);
 ```
 
 ![image](https://github.com/shoedler/tabelify/assets/38029550/90be20c0-04ef-478e-9ddc-a8a1f46cbb23)
-
