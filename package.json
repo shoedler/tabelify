@@ -1,19 +1,27 @@
 {
-  "name": "tabelify",
+  "name": "@shoedler/tabelify",
   "version": "1.0.0",
   "description": "Nicely display data as tables in the terminal",
-  "engines" : { "node" : ">=18.0.0" },
-  "main": "index.ts",
-  "type": "module",
-  "scripts": {
-    "dev": "npm run build && node dist/src/samples.js",
-    "build": "tsc -p tsconfig.json",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watchAll"
-  },
   "keywords": [],
   "author": "shoedler",
   "license": "gplv3",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "main": "dist/cjs/tabelify.js",
+  "module": "dist/esm/tabelify.js",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "npm run build && node dist/src/samples.js",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.cjs.json",
+    "prepublishOnly": "npm run build",
+    "howToPublish": "echo 'npm publish --access=public'",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watchAll"
+  },
   "dependencies": {
     "chalk": "^5.2.0"
   },
@@ -24,6 +32,7 @@
     "prettier": "^2.8.8",
     "ts-jest": "^29.1.0",
     "ts-node": "^10.9.1",
+    "tslib": "^2.5.3",
     "typescript": "^5.1.3"
   }
 }

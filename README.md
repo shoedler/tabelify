@@ -6,7 +6,7 @@ Only one dependency: [chalk](https://github.com/chalk/chalk) to colorize the out
 ## Installation
 
 ```bash
-npm i tabelify
+npm i @shoelder/tabelify
 ```
 
 ## Basic Usage
