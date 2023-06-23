@@ -1,3 +1,6 @@
+[![Node.js CI](https://github.com/shoedler/tabelify/actions/workflows/node.js.yml/badge.svg)](https://github.com/shoedler/tabelify/actions/workflows/node.js.yml)
+[![Node.js Package](https://github.com/shoedler/tabelify/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/shoedler/tabelify/actions/workflows/npm-publish.yml)
+
 # tabelify
 
 Nicely display data as tables in the terminal.
