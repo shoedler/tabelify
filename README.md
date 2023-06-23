@@ -6,6 +6,8 @@
 Nicely display data as tables in the terminal.
 Only one dependency: [chalk](https://github.com/chalk/chalk) to colorize the output.
 
+![image](https://github.com/shoedler/tabelify/assets/38029550/42056d8f-3a62-46c5-a68b-54d1e9214dd7)
+
 ## Installation
 
 ```bash
