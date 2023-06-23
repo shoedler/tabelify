@@ -72,7 +72,7 @@ export function tabelify<T, K extends keyof T>(
     selector.map((key) => {
       const options = columnOptions && columnOptions[key] ? columnOptions[key] : {};
       const formatter = options.formatter ? options.formatter : defaultFormatters.cell;
-      const cell = isPrimitive(item) ? defaultFormatters.internalCell('─') : formatter(item[key], chalk);
+      const cell = isPrimitive(item) ? defaultFormatters.internalCellWithoutValue() : formatter(item[key], chalk);
 
       return createCell(cell, options);
     }),
@@ -81,15 +81,17 @@ export function tabelify<T, K extends keyof T>(
   const table = [headerData, ...tableData];
 
   // Add primitives
+  // A note about this. We're currently offsetting the data array by 1, because the first row is the header.
+  // This if fine for now, but if we ever add a feature that allows the user to remove the header or have multiple headers, this will break.
   if (hasPrimitives) {
     for (let i = 0; i < table.length; i++) {
       const row = table[i];
       const value =
         i == 0
           ? defaultFormatters.internalHeader('[Value]')
-          : isPrimitive(data[i - 1]) || Array.isArray(data[i - 1]) // Only style primitives, otherwise it might recurse Objects and overflow the stack
+          : isPrimitive(data[i - 1]) || Array.isArray(data[i - 1]) // Only style primitives and arrays, otherwise it will recurse Objects and overflow the stack
           ? defaultFormatters.cell(data[i - 1])
-          : defaultFormatters.internalCell('─');
+          : defaultFormatters.internalCellWithoutValue(); // Non-primitives don't have a value in this column
       const cell = createCell(value, { horizontalAlignment: 'center' });
 
       row.push(cell);
