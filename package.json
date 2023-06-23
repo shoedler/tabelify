@@ -1,6 +1,6 @@
 {
   "name": "@shoedler/tabelify",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Nicely display data as tables in the terminal",
   "keywords": [],
   "author": "shoedler",
