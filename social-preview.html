@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title></title>
+    <style>
+      body {
+        margin: 0;
+      }
+
+      .sketch {
+        background-image: radial-gradient(hsla(230, 5%, 80%, 0.08) 2px, transparent 0),
+          radial-gradient(hsl(0deg 0% 100% / 8%) 1px, transparent 0);
+        background-size: 32px 32px, 8px 8px;
+        background-position: center;
+        background-color: hsl(230deg 5% 9%);
+        position: relative;
+      }
+
+      .wrapper {
+        padding: 128px;
+        position: static;
+        align-items: center;
+        display: flex;
+        justify-content: space-between;
+        box-sizing: border-box;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .bg-image {
+        margin-top: 2rem;
+        background-image: url(https://github.com/shoedler/tabelify/assets/38029550/42056d8f-3a62-46c5-a68b-54d1e9214dd7);
+        background-size: contain;
+        width: calc(1846px / 2);
+        height: calc(762px / 2);
+      }
+
+      .text {
+        font-family: Fira Code, sans-serif;
+        color: white;
+      }
+
+      .text > h1 {
+        padding-top: 8px;
+        padding-bottom: 32px;
+        padding-right: 32px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        margin: 0;
+        font-size: 2rem;
+        line-height: 1;
+      }
+
+      .text > h2 {
+        font-size: 1rem;
+        padding: 0;
+        margin: 0;
+      }
+
+      .text > p {
+        margin-top: 0;
+        padding-left: 0.1em;
+        padding-right: 0.1em;
+        margin: 0;
+        padding: 0;
+        font-size: 16px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body class="sketch">
+    <div class="wrapper">
+      <div class="text">
+        <h2>@shoedler/</h2>
+        <h1>tabelify</h1>
+        <p>Nicely display data as tables in the terminal.</p>
+        <div class="bg-image"></div>
+      </div>
+    </div>
+  </body>
+</html>

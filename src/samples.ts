@@ -91,7 +91,34 @@ const mixed = () => {
   return out;
 };
 
-[basic(), advanced(), mixed()].forEach((out) => {
+const banner = () => {
+  const data = [
+    { name: 'John', age: 24, city: 'New York' },
+    { name: 'Jane', age: 23, city: 'London' },
+    { name: 'Jack', age: 25, city: [1, 2, 3, 4] },
+  ];
+
+  const out = tabelify(data, {
+    tabelifyOptions: {
+      recurse: true,
+      indices: true,
+    },
+    columnOptions: {
+      age: {
+        horizontalAlignment: 'right',
+      },
+      name: {
+        formatter: (value, chalk) => chalk.greenBright(value),
+      },
+    },
+  });
+
+  // console.log(out);
+
+  return out;
+};
+
+[basic(), advanced(), mixed(), banner()].forEach((out) => {
   console.log('\n'.repeat(5));
   console.log(
     out
